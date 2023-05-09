@@ -242,3 +242,9 @@ catalog-build: opm ## Build a catalog image.
 .PHONY: catalog-push
 catalog-push: ## Push a catalog image.
 	$(MAKE) docker-push IMG=$(CATALOG_IMG)
+
+# dev
+GOLANGCI-LINT = $(shell pwd)/bin/golangci-lint
+.PHONY: golangci-lint ## Download golangci-lint locally if necessary.
+golangci-lint:
+	$(call go-get-tool,$(GOLANGCI-LINT),github.com/golangci/golangci-lint/cmd/golangci-lint@v1.51.2)
