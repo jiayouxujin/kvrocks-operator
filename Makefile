@@ -119,7 +119,7 @@ buildx:
 
 .PHONY: lint
 lint: golangci-lint
-	$(GOLANGCI-LINT) run --config .golangci.yaml --fix
+	$(GOLANGCI-LINT) run --config .golangci.yaml
 
 ##@ Build
 
