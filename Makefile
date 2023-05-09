@@ -119,6 +119,7 @@ buildx:
 
 .PHONY: lint
 lint: golangci-lint
+	@echo "Golangci-lint is running..."
 	$(GOLANGCI-LINT) run
 
 ##@ Build
