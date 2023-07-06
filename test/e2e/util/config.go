@@ -13,10 +13,11 @@ const (
 )
 
 type Config struct {
-	KruiseVersion string `yaml:"kruiseVersion"`
-	ClusterName   string `yaml:"clusterName"`
-	Namespace     string `yaml:"namespace"`
-	KubeConfig    string `yaml:"kubeConfig"`
+	KruiseVersion    string `yaml:"kruiseVersion"`
+	ClusterName      string `yaml:"clusterName"`
+	Namespace        string `yaml:"namespace"`
+	ChaosMeshEnabled bool   `yaml:"chaosMeshEnabled"`
+	KubeConfig       string `yaml:"kubeConfig"`
 }
 
 func NewConfig(configFilePath string) (*Config, error) {

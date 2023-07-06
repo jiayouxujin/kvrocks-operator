@@ -21,10 +21,11 @@ import (
 )
 
 type KubernetesEnv struct {
-	config           *Config
-	kubernetesConfig *rest.Config
-	Client           client.Client
-	Clean            func() error
+	config               *Config
+	kubernetesConfig     *rest.Config
+	Client               client.Client
+	ChaosMeshExperiments []Experiment
+	Clean                func() error
 }
 
 func Start(config *Config) *KubernetesEnv {
@@ -60,6 +61,7 @@ func Start(config *Config) *KubernetesEnv {
 
 	env.installKruise()
 	env.installKvrocksOperator()
+	env.installChaosMesh()
 	return env
 }
 
@@ -139,6 +141,40 @@ func (env *KubernetesEnv) installKvrocksOperator() {
 	if !env.isHelmInstalled("kvrocks-operator", env.config.Namespace) {
 		_, err := HelmTool("install", "kvrocks-operator", "../../../deploy/operator", "-n", env.config.Namespace, "--create-namespace")
 		Expect(err).NotTo(HaveOccurred())
+	}
+}
+
+func (env *KubernetesEnv) installChaosMesh() {
+	if env.config.ChaosMeshEnabled {
+		fmt.Fprintf(GinkgoWriter, "install chaosmesh\n")
+
+		// Add Chaosmesh Helm repo
+		repoList, err := HelmTool("repo", "list")
+		if err != nil && strings.Contains(err.Error(), "Error: no repositories to show") {
+			err = nil
+		}
+		Expect(err).Should(Succeed())
+		if !strings.Contains(repoList, "chaos-mesh") {
+			_, err := HelmTool("repo", "add", "chaos-mesh", "https://charts.chaos-mesh.org")
+			Expect(err).NotTo(HaveOccurred())
+		}
+
+		// Update Helm repo
+		_, err = HelmTool("repo", "update")
+		Expect(err).NotTo(HaveOccurred())
+
+		// Create ns
+		_, err = KubectlTool("create", "ns", "chaos-mesh")
+		if err != nil && !strings.Contains(err.Error(), "already exists") {
+			err = nil
+		}
+		Expect(err).NotTo(HaveOccurred())
+
+		// Install OpenKruise using Helm
+		if !env.isHelmInstalled("chaos-mesh", "chaos-mesh") {
+			_, err = HelmTool("install", "chaos-mesh", "chaos-mesh/chaos-mesh", "-n=chaos-mesh", "--wait")
+			Expect(err).NotTo(HaveOccurred())
+		}
 	}
 }
 

@@ -12,6 +12,7 @@ import (
 	"github.com/RocksLabs/kvrocks-operator/pkg/client/kvrocks"
 	"github.com/RocksLabs/kvrocks-operator/pkg/resources"
 	. "github.com/RocksLabs/kvrocks-operator/test/e2e/util"
+	chaosmeshv1alpha1 "github.com/chaos-mesh/chaos-mesh/api/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	kruise "github.com/openkruise/kruise-api/apps/v1beta1"
@@ -41,6 +42,20 @@ var _ = BeforeSuite(func() {
 	env = Start(config)
 	ctx = context.Background()
 	kvrocksClient = kvrocks.NewKVRocksClient(ctrl.Log)
+
+	// Chaosmesh: try to kill kvrocks operator every two minute
+	if config.ChaosMeshEnabled {
+		env.ScheduleInjectPodKill(
+			chaosmeshv1alpha1.PodSelectorSpec{
+				GenericSelectorSpec: chaosmeshv1alpha1.GenericSelectorSpec{
+					Namespaces:     []string{config.Namespace},
+					LabelSelectors: map[string]string{"app": "kvrocks-operator-controller-manager"},
+				},
+			},
+			"*/2 * * * *",
+			chaosmeshv1alpha1.OneMode,
+		)
+	}
 })
 
 var _ = AfterSuite(func() {
