@@ -10,6 +10,7 @@ import (
 	"time"
 
 	kvrocksv1alpha1 "github.com/RocksLabs/kvrocks-operator/api/v1alpha1"
+	chaosmeshv1alpha1 "github.com/chaos-mesh/chaos-mesh/api/v1alpha1"
 	. "github.com/onsi/ginkgo"
 	. "github.com/onsi/gomega"
 	kruise "github.com/openkruise/kruise-api/apps/v1beta1"
@@ -103,6 +104,10 @@ func (env *KubernetesEnv) registerScheme() {
 	Expect(err).NotTo(HaveOccurred())
 	err = kruise.AddToScheme(scheme.Scheme)
 	Expect(err).NotTo(HaveOccurred())
+	if env.config.ChaosMeshEnabled {
+		err = chaosmeshv1alpha1.AddToScheme(scheme.Scheme)
+		Expect(err).NotTo(HaveOccurred())
+	}
 }
 
 func (env *KubernetesEnv) installKruise() {
