@@ -7,6 +7,7 @@ import (
 
 	"github.com/openkruise/kruise-api/apps/pub"
 	kruise "github.com/openkruise/kruise-api/apps/v1beta1"
+	appsv1 "k8s.io/api/apps/v1"
 	v1 "k8s.io/api/apps/v1"
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/resource"
@@ -18,6 +19,64 @@ import (
 var TerminationGracePeriodSeconds int64 = 20
 
 const DefaultStorageSize = "10Gi"
+
+// default storage for controller
+func NewEtcdStatefulSet(instance *kvrocksv1alpha1.KVRocks) *appsv1.StatefulSet {
+	replicas := int32(1)
+
+	return &v1.StatefulSet{
+		TypeMeta: metav1.TypeMeta{
+			APIVersion: "apps/v1",
+			Kind:       "StatefulSet",
+		},
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "etcd0",
+			Namespace: instance.Namespace,
+		},
+		Spec: v1.StatefulSetSpec{
+			Replicas: &replicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: map[string]string{
+					"app": "etcd",
+				},
+			},
+			ServiceName: "etcd0-service",
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: map[string]string{
+						"app": "etcd",
+					},
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  "etcd0",
+							Image: "quay.io/coreos/etcd:latest",
+							Ports: []corev1.ContainerPort{
+								{
+									ContainerPort: 2380,
+								},
+								{
+									ContainerPort: 2379,
+								},
+							},
+							Args: []string{
+								"/usr/local/bin/etcd",
+								"--name=etcd0",
+								"--listen-peer-urls=http://0.0.0.0:2380",
+								"--listen-client-urls=http://0.0.0.0:2379",
+								"--advertise-client-urls=http://etcd0-service:2379", 
+								"--initial-advertise-peer-urls=http://etcd0-service:2380",
+								"--initial-cluster=etcd0=http://etcd0-service:2380",
+								"--initial-cluster-state=new",
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}
 
 func NewStatefulSet(instance *kvrocksv1alpha1.KVRocks, name string) *kruise.StatefulSet {
 	labels := MergeLabels(instance.Labels, StatefulSetLabels(name))

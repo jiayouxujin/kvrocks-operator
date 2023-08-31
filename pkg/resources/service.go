@@ -3,6 +3,7 @@ package resources
 import (
 	corev1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	"k8s.io/apimachinery/pkg/util/intstr"
 
 	kvrocksv1alpha1 "github.com/RocksLabs/kvrocks-operator/api/v1alpha1"
 	"github.com/RocksLabs/kvrocks-operator/pkg/client/kvrocks"
@@ -50,6 +51,51 @@ func NewKVRocksService(instance *kvrocksv1alpha1.KVRocks) *corev1.Service {
 			Selector: MergeLabels(instance.Labels, map[string]string{
 				KvrocksRole: kvrocks.RoleMaster,
 			}),
+		},
+	}
+}
+
+func NewEtcdService(instance *kvrocksv1alpha1.KVRocks) *corev1.Service {
+	return &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "etcd0-service",
+			Namespace: instance.Namespace,
+			Labels:    map[string]string{"app": "etcd"},
+		},
+		Spec: corev1.ServiceSpec{
+			Ports: []corev1.ServicePort{
+				{
+					Name:       "client",
+					Port:       2379,
+					TargetPort: intstr.FromInt(2379),
+				},
+				{
+					Name:       "server",
+					Port:       2380,
+					TargetPort: intstr.FromInt(2380),
+				},
+			},
+			Selector: map[string]string{"app": "etcd"},
+		},
+	}
+}
+
+func NewKVRocksControllerService(instance *kvrocksv1alpha1.KVRocks) *corev1.Service {
+	return &corev1.Service{
+		ObjectMeta: metav1.ObjectMeta{
+			Name:      "kvrocks-controller-service",
+			Namespace: instance.Namespace,
+			Labels:    map[string]string{"app": "kvrocks-controller"},
+		},
+		Spec: corev1.ServiceSpec{
+			Selector: map[string]string{"app": "kvrocks-controller"},
+			Ports: []corev1.ServicePort{
+				{
+					Protocol:   corev1.ProtocolTCP,
+					Port:       9379,
+					TargetPort: intstr.FromInt(9379),
+				},
+			},
 		},
 	}
 }

@@ -74,3 +74,57 @@ func GetDeploymentName(name string, index ...int) string {
 	}
 	return name
 }
+
+func NewKVRocksControllerDeployment(instance *kvrocksv1alpha1.KVRocks) *appsv1.Deployment {
+	labels := map[string]string{"app": "kvrocks-controller"}
+	replicas := int32(1)
+
+	return &appsv1.Deployment{
+		ObjectMeta: metav1.ObjectMeta{
+			Name: "kvrocks-controller",
+		},
+		Spec: appsv1.DeploymentSpec{
+			Replicas: &replicas,
+			Selector: &metav1.LabelSelector{
+				MatchLabels: labels,
+			},
+			Template: corev1.PodTemplateSpec{
+				ObjectMeta: metav1.ObjectMeta{
+					Labels: labels,
+				},
+				Spec: corev1.PodSpec{
+					Containers: []corev1.Container{
+						{
+							Name:  "kvrocks-controller",
+							Image: "jinxu95/kvrocks-controller:latest",
+							Ports: []corev1.ContainerPort{
+								{
+									ContainerPort: 9379,
+								},
+							},
+							VolumeMounts: []corev1.VolumeMount{
+								{
+									Name:      "config-volume",
+									MountPath: "/var/lib/kvctl/config.yaml",
+									SubPath:   "config.yaml",
+								},
+							},
+						},
+					},
+					Volumes: []corev1.Volume{
+						{
+							Name: "config-volume",
+							VolumeSource: corev1.VolumeSource{
+								ConfigMap: &corev1.ConfigMapVolumeSource{
+									LocalObjectReference: corev1.LocalObjectReference{
+										Name: "kvrocks-controller-config",
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+}

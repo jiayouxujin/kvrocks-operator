@@ -41,13 +41,17 @@ func NewKVRocksClusterHandler(
 }
 
 func (h *KVRocksClusterHandler) Handle() (error, bool) {
-	if h.instance.Status.Shrink != nil {
-		err := h.cleanStatefulSet()
-		if err != nil || h.requeue {
-			return err, false
-		}
+	// if h.instance.Status.Shrink != nil {
+	// 	err := h.cleanStatefulSet()
+	// 	if err != nil || h.requeue {
+	// 		return err, false
+	// 	}
+	// }
+	err := h.ensureController()
+	if err != nil || h.requeue {
+		return err, false
 	}
-	err := h.ensureKubernetes()
+	err = h.ensureKubernetes()
 	if err != nil || h.requeue {
 		return err, false
 	}
