@@ -65,7 +65,7 @@ func NewEtcdStatefulSet(instance *kvrocksv1alpha1.KVRocks) *appsv1.StatefulSet {
 								"--name=etcd0",
 								"--listen-peer-urls=http://0.0.0.0:2380",
 								"--listen-client-urls=http://0.0.0.0:2379",
-								"--advertise-client-urls=http://etcd0-service:2379", 
+								"--advertise-client-urls=http://etcd0-service:2379",
 								"--initial-advertise-peer-urls=http://etcd0-service:2380",
 								"--initial-cluster=etcd0=http://etcd0-service:2380",
 								"--initial-cluster-state=new",
@@ -212,7 +212,7 @@ func NewReplicationStatefulSet(instance *kvrocksv1alpha1.KVRocks) *kruise.Statef
 
 func NewClusterStatefulSet(instance *kvrocksv1alpha1.KVRocks, index int) *kruise.StatefulSet {
 	sts := NewStatefulSet(instance, GetStatefulSetName(instance.Name, index))
-	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, *NewInstanceContainer(instance))
+	sts.Spec.Template.Spec.Containers = append(sts.Spec.Template.Spec.Containers, *NewInstanceContainer(instance), *NewExporterContainer(instance))
 	return sts
 }
 

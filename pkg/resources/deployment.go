@@ -82,6 +82,7 @@ func NewKVRocksControllerDeployment(instance *kvrocksv1alpha1.KVRocks) *appsv1.D
 	return &appsv1.Deployment{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "kvrocks-controller",
+			Namespace: instance.Namespace,
 		},
 		Spec: appsv1.DeploymentSpec{
 			Replicas: &replicas,

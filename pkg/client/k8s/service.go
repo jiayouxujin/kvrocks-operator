@@ -3,6 +3,7 @@ package k8s
 import (
 	corev1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 func (c *Client) CreateIfNotExistsService(service *corev1.Service) error {
@@ -11,4 +12,12 @@ func (c *Client) CreateIfNotExistsService(service *corev1.Service) error {
 	}
 	c.logger.V(1).Info("service create successfully", "service", service.Name)
 	return nil
+}
+
+func (c *Client) GetService(key types.NamespacedName) (*corev1.Service, error) {
+	var service corev1.Service
+	if err := c.client.Get(ctx, key, &service); err != nil {
+		return nil, err
+	}
+	return &service, nil
 }

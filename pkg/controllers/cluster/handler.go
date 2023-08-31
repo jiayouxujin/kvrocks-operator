@@ -22,6 +22,11 @@ type KVRocksClusterHandler struct {
 	key      types.NamespacedName
 	version  int
 	masters  map[string]*kvrocks.Node
+	// new
+	newStsNodes         []*kvrocks.Node
+	endpoint            string
+	controllerNamespace string
+	controllerCluster   string
 }
 
 func NewKVRocksClusterHandler(
@@ -41,45 +46,45 @@ func NewKVRocksClusterHandler(
 }
 
 func (h *KVRocksClusterHandler) Handle() (error, bool) {
-	// if h.instance.Status.Shrink != nil {
-	// 	err := h.cleanStatefulSet()
-	// 	if err != nil || h.requeue {
-	// 		return err, false
-	// 	}
-	// }
 	err := h.ensureController()
 	if err != nil || h.requeue {
 		return err, false
+	}
+	if h.instance.Status.Shrink != nil {
+		err := h.cleanStatefulSet()
+		if err != nil || h.requeue {
+			return err, false
+		}
 	}
 	err = h.ensureKubernetes()
 	if err != nil || h.requeue {
 		return err, false
 	}
-	err = h.ensureFailover()
-	if err != nil || h.requeue {
-		return err, false
-	}
+	// err = h.ensureFailover()
+	// if err != nil || h.requeue {
+	// 	return err, false
+	// }
 
 	err = h.ensureKVRocksStatus()
 	if err != nil || h.requeue {
 		return err, false
 	}
-	err = h.reBalance()
-	if err != nil || h.requeue {
-		return err, false
-	}
-	err = h.ensureShrink()
-	if err != nil || h.requeue {
-		return err, false
-	}
-	err = h.ensureSentinel()
-	if err != nil || h.requeue {
-		return err, false
-	}
-	err = h.cleanPersistentVolumeClaim()
-	if err != nil || h.requeue {
-		return err, false
-	}
+	// err = h.reBalance()
+	// if err != nil || h.requeue {
+	// 	return err, false
+	// }
+	// err = h.ensureShrink()
+	// if err != nil || h.requeue {
+	// 	return err, false
+	// }
+	// err = h.ensureSentinel()
+	// if err != nil || h.requeue {
+	// 	return err, false
+	// }
+	// err = h.cleanPersistentVolumeClaim()
+	// if err != nil || h.requeue {
+	// 	return err, false
+	// }
 	return nil, true
 }
 

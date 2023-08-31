@@ -2,6 +2,7 @@ package cluster
 
 import (
 	"fmt"
+	"strconv"
 
 	"k8s.io/apimachinery/pkg/types"
 
@@ -21,20 +22,33 @@ func (h *KVRocksClusterHandler) ensureKVRocksStatus() error {
 		return err
 	}
 	if h.instance.Status.Status == kvrocksv1alpha1.StatusCreating {
-		if err = h.initCluster(); err != nil {
+		// if err = h.initCluster(); err != nil {
+		// 	return err
+		// }
+		nodes := make([]string, 0)
+		for _, node := range h.newStsNodes {
+			nodes = append(nodes, node.IP+":"+strconv.Itoa(kvrocks.KVRocksPort))
+		}
+		if err = h.kvrocks.CreateCluster(h.endpoint, nodes, h.controllerNamespace, "cluster-demo"); err != nil {
 			return err
 		}
-	} else {
-		if err = h.ensureReplication(); err != nil {
+		h.controllerCluster = "cluster-demo"
+		h.instance.Status.Status = kvrocksv1alpha1.StatusRunning
+		if err := h.k8s.UpdateKVRocks(h.instance); err != nil {
 			return err
 		}
 	}
-	h.ensureVersion()
-	if err = h.ensureStatusTopoMsg(); err != nil {
-		return err
-	}
-	commHandler := common.NewCommandHandler(h.instance, h.k8s, h.kvrocks, h.password)
-	h.requeue, err = commHandler.EnsureTopo()
+	// } else {
+	// 	if err = h.ensureReplication(); err != nil {
+	// 		return err
+	// 	}
+	// }
+	// h.ensureVersion()
+	// if err = h.ensureStatusTopoMsg(); err != nil {
+	// 	return err
+	// }
+	// commHandler := common.NewCommandHandler(h.instance, h.k8s, h.kvrocks, h.password)
+	// h.requeue, err = commHandler.EnsureTopo()
 	h.version = h.instance.Status.Version
 	return err
 }

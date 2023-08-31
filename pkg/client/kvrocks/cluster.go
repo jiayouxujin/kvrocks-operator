@@ -1,7 +1,10 @@
 package kvrocks
 
 import (
+	"encoding/json"
+	"net/http"
 	"strings"
+	"time"
 )
 
 const (
@@ -11,6 +14,62 @@ const (
 	ClusterVersionInvalid = "Invalid cluster version"
 	ClusterInvalidVersion = "Invalid version of cluster"
 )
+
+type ClusterOptions struct {
+	Name     string   `json:"name"`
+	Nodes    []string `json:"nodes"`
+	Replicas int      `json:"replicas"`
+	Password string   `json:"password"`
+}
+
+func (s *Client) CreateNamespace(endpoint string, namespace string) error {
+	client := &http.Client{
+		Timeout: time.Second * 5,
+	}
+
+	resp, err := client.Post(
+		endpoint+"namespaces",
+		"application/json",
+		strings.NewReader(`{"name": "`+namespace+`"}`),
+	)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return err
+	}
+	return nil
+}
+
+func (s *Client) CreateCluster(endpoint string, nodes []string, namespace string, clusterName string) error {
+	clusterOptions := &ClusterOptions{
+		Name:     clusterName,
+		Nodes:    nodes,
+		Replicas: 2,
+		Password: "123456",
+	}
+	clusterOptionsJson, err := json.Marshal(clusterOptions)
+	if err != nil {
+		return err
+	}
+
+	client := &http.Client{
+		Timeout: time.Second * 5,
+	}
+
+	resp, err := client.Post(
+		endpoint+"namespaces/"+namespace+"/clusters",
+		"application/json",
+		strings.NewReader(string(clusterOptionsJson)),
+	)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return err
+	}
+	return nil
+}
 
 func (s *Client) SetClusterID(ip, password, nodeID string) error {
 	c := kvrocksClient(ip, password)

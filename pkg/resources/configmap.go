@@ -128,7 +128,7 @@ func ParseKVRocksConfigs(config map[string]string) map[string]string {
 	return cfg
 }
 
-func NewKVRocksControllerConfigmap() *corev1.ConfigMap {
+func NewKVRocksControllerConfigmap(instance *kvrocksv1alpha1.KVRocks) *corev1.ConfigMap {
 	configYAML := `
 addr: "0.0.0.0:9379"
 etcd:
@@ -146,6 +146,7 @@ etcd:
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
 			Name: "kvrocks-controller-config",
+			Namespace: instance.Namespace,
 		},
 		Data: map[string]string{
 			"config.yaml": configYAML,

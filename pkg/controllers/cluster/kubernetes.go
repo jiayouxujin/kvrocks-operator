@@ -33,29 +33,26 @@ func (h *KVRocksClusterHandler) ensureKubernetes() error {
 		return err
 	}
 	h.password = oldCM.Data["password"]
-	for i := 0; i < int(h.instance.Spec.Master); i++ {
-		sts := resources.NewClusterStatefulSet(h.instance, i)
-		if err = h.k8s.CreateIfNotExistsStatefulSet(sts); err != nil {
-			return err
-		}
-	}
-	curStsList, err := h.k8s.ListStatefulSets(h.instance.Namespace, resources.SelectorLabels(h.instance))
-	if err != nil {
+	sts := resources.NewReplicationStatefulSet(h.instance)
+	if err = h.k8s.CreateStatefulSetOrUpdateImage(sts); err != nil {
 		return err
 	}
-	if len(curStsList.Items) < int(h.instance.Spec.Master) {
+	oldSts, err := h.k8s.GetStatefulSet(h.key)
+	if err != nil {
+		if errors.IsNotFound(err) {
+			h.requeue = true
+			return nil
+		}
+		return err
+	}
+	if oldSts.Status.ReadyReplicas != *oldSts.Spec.Replicas {
+		h.log.Info("waiting for statefulSet ready")
 		h.requeue = true
 		return nil
 	}
-	h.stsNodes = make([][]*kvrocks.Node, len(curStsList.Items))
 	// scaling up
-	for i := 0; i < len(curStsList.Items); i++ {
-		sts := resources.NewClusterStatefulSet(h.instance, i)
-		key := types.NamespacedName{
-			Namespace: h.instance.Namespace,
-			Name:      sts.Name,
-		}
-		oldSts, err := h.k8s.GetStatefulSet(key)
+	if *oldSts.Spec.Replicas < *sts.Spec.Replicas {
+		oldSts, err := h.k8s.GetStatefulSet(h.key)
 		if err != nil {
 			return err
 		}
@@ -74,78 +71,64 @@ func (h *KVRocksClusterHandler) ensureKubernetes() error {
 		}
 	}
 	// init h.stsNode
-	for i := 0; i < len(curStsList.Items); i++ {
-		key := types.NamespacedName{
-			Namespace: h.instance.Namespace,
-			Name:      resources.GetStatefulSetName(h.instance.Name, i),
-		}
-		sts, err := h.k8s.GetStatefulSet(key)
-		if err != nil {
-			return err
-		}
-		if sts.Status.ReadyReplicas != *sts.Spec.Replicas {
-			h.log.Info("waiting for statefulSet ready", "statefulSet", key.Name)
+	sts, err = h.k8s.GetStatefulSet(h.key)
+	if err != nil {
+		return err
+	}
+	if sts.Status.ReadyReplicas != *sts.Spec.Replicas {
+		h.log.Info("waiting for statefulSet ready")
+		h.requeue = true
+		return nil
+	}
+	h.newStsNodes = make([]*kvrocks.Node, 0)
+	pods, err := h.k8s.ListStatefulSetPods(h.key)
+	if err != nil {
+		return err
+	}
+	for _, pod := range pods.Items {
+		if pod.DeletionTimestamp != nil {
+			h.log.Info("pod is deleting,please wait")
 			h.requeue = true
 			return nil
 		}
-		pods, err := h.k8s.ListStatefulSetPods(key)
-		if err != nil {
-			return err
-		}
-		for _, pod := range pods.Items {
-			if pod.DeletionTimestamp != nil {
-				h.log.Info("pod is deleting,please wait")
-				h.requeue = true
-				return nil
-			}
-			podIndex, err := resources.GetPVCOrPodIndex(pod.Name)
-			if err != nil {
-				return err
-			}
-			// init topo message
-			h.stsNodes[i] = append(h.stsNodes[i], &kvrocks.Node{
-				IP:       pod.Status.PodIP,
-				PodIndex: podIndex,
-			})
-		}
-		sort.Slice(h.stsNodes[i], func(k, j int) bool {
-			return h.stsNodes[i][k].PodIndex < h.stsNodes[i][j].PodIndex
+		h.newStsNodes = append(h.newStsNodes, &kvrocks.Node{
+			IP: pod.Status.PodIP,
 		})
 	}
 	curInstance, err := h.k8s.GetKVRocks(h.key)
 	if err != nil {
 		return err
 	}
-	if h.instance.ResourceVersion != curInstance.ResourceVersion { // wait for topo mesage flush
+	if h.instance.ResourceVersion != curInstance.ResourceVersion {
 		h.requeue = true
 		return nil
 	}
 	// fix topo message
-	for i, replicationTopo := range h.instance.Status.Topo {
-		for j, topo := range replicationTopo.Topology {
-			h.stsNodes[i][j].NodeId = topo.NodeId
-			h.stsNodes[i][j].Role = topo.Role
-			h.stsNodes[i][j].Master = topo.MasterId
-			h.stsNodes[i][j].Slots = kvrocks.SlotsToInt(topo.Slots)
-			h.stsNodes[i][j].Failover = topo.Failover
-			if topo.Migrate != nil {
-				for _, migrate := range topo.Migrate {
-					h.stsNodes[i][j].Migrate = append(h.stsNodes[i][j].Migrate, kvrocks.MigrateMsg{
-						DstNodeID: migrate.DstNode,
-						Slots:     kvrocks.SlotsToInt(migrate.Slots),
-					})
-				}
-			}
-			if topo.Import != nil {
-				for _, im := range topo.Import {
-					h.stsNodes[i][j].Import = append(h.stsNodes[i][j].Import, kvrocks.ImportMsg{
-						SrcNodeId: im.SrcNode,
-						Slots:     kvrocks.SlotsToInt(im.Slots),
-					})
-				}
-			}
-		}
-	}
+	// for i, replicationTopo := range h.instance.Status.Topo {
+	// 	for j, topo := range replicationTopo.Topology {
+	// 		h.stsNodes[i][j].NodeId = topo.NodeId
+	// 		h.stsNodes[i][j].Role = topo.Role
+	// 		h.stsNodes[i][j].Master = topo.MasterId
+	// 		h.stsNodes[i][j].Slots = kvrocks.SlotsToInt(topo.Slots)
+	// 		h.stsNodes[i][j].Failover = topo.Failover
+	// 		if topo.Migrate != nil {
+	// 			for _, migrate := range topo.Migrate {
+	// 				h.stsNodes[i][j].Migrate = append(h.stsNodes[i][j].Migrate, kvrocks.MigrateMsg{
+	// 					DstNodeID: migrate.DstNode,
+	// 					Slots:     kvrocks.SlotsToInt(migrate.Slots),
+	// 				})
+	// 			}
+	// 		}
+	// 		if topo.Import != nil {
+	// 			for _, im := range topo.Import {
+	// 				h.stsNodes[i][j].Import = append(h.stsNodes[i][j].Import, kvrocks.ImportMsg{
+	// 					SrcNodeId: im.SrcNode,
+	// 					Slots:     kvrocks.SlotsToInt(im.Slots),
+	// 				})
+	// 			}
+	// 		}
+	// 	}
+	// }
 	h.version = h.instance.Status.Version
 	h.log.Info("kubernetes resources ok")
 	return nil
