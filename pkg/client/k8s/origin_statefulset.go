@@ -14,7 +14,6 @@ func (c *Client) CreateIfNotExistsOriginalStatefulSet(sts *appsv1.StatefulSet) e
 	return nil
 }
 
-
 func (c *Client) GetOriginalStatefulSet(key types.NamespacedName) (*appsv1.StatefulSet, error) {
 	var sts appsv1.StatefulSet
 	if err := c.client.Get(ctx, key, &sts); err != nil {

@@ -2,6 +2,7 @@ package cluster
 
 import (
 	"github.com/RocksLabs/kvrocks-operator/pkg/resources"
+	"k8s.io/apimachinery/pkg/types"
 )
 
 func (h *KVRocksClusterHandler) ensureController() error {
@@ -14,7 +15,10 @@ func (h *KVRocksClusterHandler) ensureController() error {
 		return err
 	}
 	// get etcd
-	etcd, err := h.k8s.GetOriginalStatefulSet(h.key)
+	etcd, err := h.k8s.GetOriginalStatefulSet(types.NamespacedName{
+		Name:      "etcd0",
+		Namespace: h.instance.Namespace,
+	})
 	if err != nil {
 		return err
 	}
@@ -32,7 +36,10 @@ func (h *KVRocksClusterHandler) ensureController() error {
 		return err
 	}
 	// get service
-	controllerService, err = h.k8s.GetService(h.key)
+	controllerService, err = h.k8s.GetService(types.NamespacedName{
+		Name:      "kvrocks-controller-service",
+		Namespace: h.instance.Namespace,
+	})
 	if err != nil {
 		return err
 	}
@@ -42,7 +49,10 @@ func (h *KVRocksClusterHandler) ensureController() error {
 		return err
 	}
 	// get deployment
-	controllerDep, err = h.k8s.GetDeployment(h.key)
+	controllerDep, err = h.k8s.GetDeployment(types.NamespacedName{
+		Name:      "kvrocks-controller",
+		Namespace: h.instance.Namespace,
+	})
 	if err != nil {
 		return err
 	}

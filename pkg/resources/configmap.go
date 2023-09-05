@@ -145,7 +145,7 @@ etcd:
 
 	return &corev1.ConfigMap{
 		ObjectMeta: metav1.ObjectMeta{
-			Name: "kvrocks-controller-config",
+			Name:      "kvrocks-controller-config",
 			Namespace: instance.Namespace,
 		},
 		Data: map[string]string{
