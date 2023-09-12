@@ -12,26 +12,6 @@ const (
 	ClusterInvalidVersion = "Invalid version of cluster"
 )
 
-func (s *Client) SetClusterID(ip, password, nodeID string) error {
-	c := kvrocksClient(ip, password)
-	defer c.Close()
-	if err := c.Do(ctx, "CLUSTERX", "SETNODEID", nodeID).Err(); err != nil {
-		return err
-	}
-	s.logger.V(1).Info("set cluster nodeID successfully", "ip", ip, "nodeId", nodeID)
-	return nil
-}
-
-func (s *Client) SetTopoMsg(ip, password, topoMsg string, version int) error {
-	c := kvrocksClient(ip, password)
-	defer c.Close()
-	if err := c.Do(ctx, "CLUSTERX", "SETNODES", topoMsg, version).Err(); err != nil {
-		return err
-	}
-	s.logger.V(1).Info("clusterx setnodes successfully", "ip", ip)
-	return nil
-}
-
 func (s *Client) MoveSlots(ip, password string, slot int, dstNodeId string) bool {
 	c := kvrocksClient(ip, password)
 	defer c.Close()
