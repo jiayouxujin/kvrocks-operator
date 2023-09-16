@@ -258,6 +258,18 @@ func (h *KVRocksClusterHandler) updateCluster() error {
 		if err != nil {
 			return err
 		}
+		// the shard need to be created
+		if shardData == nil {
+			nodes := make([]string, 0)
+			for _, node := range sts {
+				nodes = append(nodes, node.IP+":"+strconv.Itoa(kvrocks.KVRocksPort))
+			}
+			err := h.controllerClient.CreateShard(nodes, h.password)
+			if err != nil {
+				return err
+			}
+			continue
+		}
 		for _, shard := range shardData.Nodes {
 			needDeleted := true
 			for _, node := range sts {
@@ -294,6 +306,18 @@ func (h *KVRocksClusterHandler) updateCluster() error {
 					return err
 				}
 			}
+		}
+	}
+
+	// delete shard
+	shards, err := h.controllerClient.GetShards()
+	if err != nil {
+		return err
+	}
+	// TODO delete shard by any index
+	for i := len(shards) - 1; i >= len(h.stsNodes); i-- {
+		if err := h.controllerClient.DeleteShard(i); err != nil {
+			return err
 		}
 	}
 	return nil

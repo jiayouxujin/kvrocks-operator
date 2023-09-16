@@ -56,6 +56,11 @@ type ShardData struct {
 	MigratingSlot int      `json:"migrating_slot"`
 }
 
+type ShardOption struct {
+	Nodes    []string `json:"nodes"`
+	Password string   `json:"password"`
+}
+
 type Controller struct {
 	EndPoint    string
 	Namespace   string
@@ -136,6 +141,70 @@ func (c *Client) CreateCluster(replicas int, nodes []string, password string) er
 	}
 	if resp.StatusCode != http.StatusCreated {
 		return err
+	}
+	return nil
+}
+
+func (c *Client) CreateShard(nodes []string, password string) error {
+	shardOption := &ShardOption{
+		Nodes:    nodes,
+		Password: password,
+	}
+	shardOptionJson, err := json.Marshal(shardOption)
+	if err != nil {
+		return err
+	}
+	resp, err := c.client.Post(c.controller.EndPoint+"/namespaces/"+c.controller.Namespace+"/clusters/"+c.controller.ClusterName+"/shards", "application/json", strings.NewReader(string(shardOptionJson)))
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != http.StatusCreated {
+		return errors.New("unexpected response status code: " + strconv.Itoa(resp.StatusCode))
+	}
+	return nil
+}
+
+func (c *Client) GetShards() ([]ShardData, error) {
+	resp, err := c.client.Get(c.controller.EndPoint + "/namespaces/" + c.controller.Namespace + "/clusters/" + c.controller.ClusterName + "/shards")
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, err
+	}
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, err
+	}
+
+	var responseMap map[string]map[string][]ShardData
+	err = json.Unmarshal(bodyBytes, &responseMap)
+	if err != nil {
+		return nil, err
+	}
+
+	shardData, ok := responseMap["data"]["shards"]
+	if !ok {
+		return nil, errors.New("unexpected response format")
+	}
+
+	return shardData, nil
+}
+
+func (c *Client) DeleteShard(shardIndex int) error{
+	req, err := http.NewRequest("DELETE", c.controller.EndPoint+"/namespaces/"+c.controller.Namespace+"/clusters/"+c.controller.ClusterName+"/shards/"+strconv.Itoa(shardIndex), nil)
+	if err != nil {
+		return err
+	}
+	resp, err := c.client.Do(req)
+	if err != nil {
+		return err
+	}
+	if resp.StatusCode != http.StatusOK {
+		return errors.New("unexpected response status code: " + strconv.Itoa(resp.StatusCode))
 	}
 	return nil
 }
