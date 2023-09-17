@@ -36,6 +36,7 @@ func (h *KVRocksClusterHandler) ensureReBalanceTopo(src int, node *kvrocks.Node)
 			retry := 0
 			wait := time.Millisecond * 10
 		moveSlots:
+			// TODO controller 500 "there is a migration task running"
 			err := h.controllerClient.MigrateSlotAndData(src, dest, slot)
 			if err != nil {
 				h.log.Error(err, "move slot error")

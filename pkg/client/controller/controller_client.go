@@ -194,7 +194,7 @@ func (c *Client) GetShards() ([]ShardData, error) {
 	return shardData, nil
 }
 
-func (c *Client) DeleteShard(shardIndex int) error{
+func (c *Client) DeleteShard(shardIndex int) error {
 	req, err := http.NewRequest("DELETE", c.controller.EndPoint+"/namespaces/"+c.controller.Namespace+"/clusters/"+c.controller.ClusterName+"/shards/"+strconv.Itoa(shardIndex), nil)
 	if err != nil {
 		return err
