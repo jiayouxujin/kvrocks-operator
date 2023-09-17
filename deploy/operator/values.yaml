@@ -1,5 +1,5 @@
 namePrefix: kvrocks-operator
-image: hulkdev/kvrocks-operator:latest
+image: jinxu95/kvrocks-operator:cluster
 
 managerNamespace:
 
@@ -10,8 +10,8 @@ kubeRBACProxyImage: bitnami/kube-rbac-proxy:0.14.0
 
 resources:
   requests:
-    memory: "1Gi"
-    cpu: "1000m"
+    memory: "200Mi"
+    cpu: "200m"
   limits:
     memory: "4Gi"
     cpu: "4000m"
