@@ -28,5 +28,5 @@ jobs:
         with:
           charts_dir: deploy
         env:
-          CR_TOKEN: "${{ secrets.MY_PERSONAL_ACCESS_TOKEN }}"
+          CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
           CR_SKIP_EXISTING: true
