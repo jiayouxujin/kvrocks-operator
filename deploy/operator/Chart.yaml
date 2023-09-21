@@ -2,5 +2,5 @@ apiVersion: v2
 name: kvrocks-operator
 description: A Helm chart for kvrocks operator
 type: application
-version: latest
+version: 0.1.0-latest
 appVersion: "2.25.0"
