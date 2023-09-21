@@ -6,6 +6,8 @@ on:
 
 jobs:
   chart:
+    permissions:
+      contents: write
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -29,3 +31,4 @@ jobs:
           charts_dir: deploy
         env:
           CR_TOKEN: "${{ secrets.GITHUB_TOKEN }}"
+          CR_SKIP_EXISTING: true
