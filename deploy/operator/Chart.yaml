@@ -3,4 +3,4 @@ name: kvrocks-operator
 description: A Helm chart for kvrocks-operator v1.0.0-alpha
 type: application
 version: 1.0.0
-appVersion: "2.25.0"
+appVersion: "1.0.0"
